@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 # Load the model
-model = load_model('src/autoencoder_250.h5')
+model = load_model('src/models/best_model.h5')
 
 window_size = 32
 stride = 11
@@ -23,12 +23,7 @@ for img_path in Path("test_images").iterdir():
 
     # Run classification
     batch = windows.reshape(-1, 3, window_size, window_size).transpose(0, 2, 3, 1)
-    output = model(batch).numpy()
-    error = np.sqrt(np.square(batch - output).mean(-1).mean(-1).mean(-1))
-    print(output.shape)
-    print(output[1, 23].sum())
-    print(error.shape)
-
-    error_image = error.reshape(*window_axes)
+    output = model(batch).numpy().argmax(-1)
+    output_image = output.reshape(*window_axes)
     plt.imshow(error_image)
     plt.show()
