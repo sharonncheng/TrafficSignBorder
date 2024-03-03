@@ -69,10 +69,10 @@ for epoch in range(500):
     def augment_image(image):
         image = tf.convert_to_tensor(image)
         image = tf.reverse(image, axis=[-1])
-        image = tf.image.random_brightness(image, max_delta=0.1)  # Random brightness
-        image = tf.image.random_saturation(image, lower=0.7, upper=1.3)  # Random saturation
-        image = tf.image.random_hue(image, max_delta=0.05)  # Random hue
-        image = tf.image.random_contrast(image, lower=0.8, upper=1.2)  # Random contrast
+        image = tf.image.random_brightness(image, max_delta=0.1)
+        image = tf.image.random_saturation(image, lower=0.7, upper=1.3)
+        image = tf.image.random_hue(image, max_delta=0.05)
+        image = tf.image.random_contrast(image, lower=0.8, upper=1.2)
         image = tf.reverse(image, axis=[-1])
         return image
 
