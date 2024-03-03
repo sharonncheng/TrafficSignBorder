@@ -5,9 +5,12 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from model import create_model
 from data_prep import X_train, y_train, X_val, y_val, X_test, y_test
 import cv2
+from tqdm import tqdm
 
 # Model parameters
 input_shape = X_train.shape[1:]  # e.g., (32, 32, 3) for 32x32 RGB images
+# Modify y_train to add an empty extra class
+y_train = np.concatenate([y_train, np.zeros_like(y_train[:, :1])], axis=1)
 num_classes = y_train.shape[1]  # Based on your dataset
 
 model = create_model(input_shape, num_classes)
@@ -17,7 +20,8 @@ def load_and_process_images(directory, crop_shape, num_images=8, crops_per_image
     extra_images = []
     extra_labels = []
 
-    for filename in selected_files:
+    print("Loading negative ImageNet images")
+    for filename in tqdm(selected_files):
         img_path = os.path.join(directory, filename)
         img = cv2.imread(img_path)
         img = img_to_array(img)
@@ -26,7 +30,7 @@ def load_and_process_images(directory, crop_shape, num_images=8, crops_per_image
         for _ in range(crops_per_image):
             crop = tf.image.random_crop(img, size=crop_shape)
             extra_images.append(crop.numpy())
-            extra_labels.append([0]*(num_classes-1) + [1])  # Update according to your encoding
+            extra_labels.append([0]*(num_classes-1) + [1])
 
     return np.array(extra_images), np.array(extra_labels)
 
@@ -41,9 +45,9 @@ for epoch in range(50):  # Assuming 50 epochs
     # Load and process extra images
     extra_images, extra_labels = load_and_process_images(directory='../../imagenet',
                                                          crop_shape=(32, 32, 3),
-                                                         num_images=8,
+                                                         num_images=2048,
                                                          crops_per_image=16)
-    
+
     # Append extra images and labels to your training data
     X_train_augmented = np.concatenate((X_train, extra_images), axis=0)
     y_train_augmented = np.concatenate((y_train, extra_labels), axis=0)
