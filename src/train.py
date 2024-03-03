@@ -50,8 +50,8 @@ for epoch in range(500):
     # Load and process extra images
     extra_images_all, extra_labels_all = load_and_process_images(directory='../../imagenet',
                                                          crop_shape=(32, 32, 3),
-                                                         num_images=2048,
-                                                         crops_per_image=16)
+                                                         num_images=32768,
+                                                         crops_per_image=8)
     extra_val_images, extra_val_labels = extra_images_all[:256], extra_labels_all[:256]
     extra_train_images, extra_train_labels = extra_images_all[256:], extra_labels_all[256:]
 
