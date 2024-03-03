@@ -6,6 +6,7 @@ from model import create_model
 from data_prep import X_train, y_train, X_val, y_val, X_test, y_test
 import cv2
 from tqdm import tqdm
+from pathlib import Path
 
 # Model parameters
 input_shape = X_train.shape[1:]  # e.g., (32, 32, 3) for 32x32 RGB images
@@ -59,12 +60,32 @@ for epoch in range(500):
     y_train_augmented = np.concatenate((y_train, extra_train_labels), axis=0)
     X_val_augmented = np.concatenate((X_val, extra_val_images), axis=0)
     y_val_augmented = np.concatenate((y_val, extra_val_labels), axis=0)
-    
-    # Optionally shuffle the augmented dataset
+
     indices = np.arange(X_train_augmented.shape[0])
     np.random.shuffle(indices)
     X_train_augmented = X_train_augmented[indices]
     y_train_augmented = y_train_augmented[indices]
+
+    def augment_image(image):
+        image = tf.convert_to_tensor(image)
+        image = tf.reverse(image, axis=[-1])
+        image = tf.image.random_brightness(image, max_delta=0.1)  # Random brightness
+        image = tf.image.random_saturation(image, lower=0.7, upper=1.3)  # Random saturation
+        image = tf.image.random_hue(image, max_delta=0.05)  # Random hue
+        image = tf.image.random_contrast(image, lower=0.8, upper=1.2)  # Random contrast
+        image = tf.reverse(image, axis=[-1])
+        return image
+
+    X_train_augmented = augment_image(X_train_augmented)
+    X_val_augmented = augment_image(X_val_augmented)
+
+    save_dir = Path.home() / "imgs"
+    save_dir.mkdir(exist_ok=True)
+    for i, img in enumerate(X_train_augmented[:256]):
+        # Construct a filename for each image
+        filename = f"image_{i}.png"
+        file_path = os.path.join(save_dir, filename)
+        cv2.imwrite(file_path, (255 * img.numpy()).astype(np.uint8))
     
     # Train on the augmented dataset for this epoch
     history = model.fit(X_train_augmented, y_train_augmented,
