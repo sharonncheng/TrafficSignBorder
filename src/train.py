@@ -11,7 +11,8 @@ from tqdm import tqdm
 input_shape = X_train.shape[1:]  # e.g., (32, 32, 3) for 32x32 RGB images
 # Modify y_train to add an empty extra class
 y_train = np.concatenate([y_train, np.zeros_like(y_train[:, :1])], axis=1)
-num_classes = y_train.shape[1]  # Based on your dataset
+y_val = np.concatenate([y_val, np.zeros_like(y_val[:, :1])], axis=1)
+num_classes = y_train.shape[1]
 
 model = create_model(input_shape, num_classes)
 
@@ -22,15 +23,18 @@ def load_and_process_images(directory, crop_shape, num_images=8, crops_per_image
 
     print("Loading negative ImageNet images")
     for filename in tqdm(selected_files):
-        img_path = os.path.join(directory, filename)
-        img = cv2.imread(img_path)
-        img = img_to_array(img)
-        img /= 255.0  # Normalize to [0, 1] if not already
+        try:
+            img_path = os.path.join(directory, filename)
+            img = cv2.imread(img_path)
+            img = img_to_array(img)
+            img /= 255.0  # Normalize to [0, 1] if not already
 
-        for _ in range(crops_per_image):
-            crop = tf.image.random_crop(img, size=crop_shape)
-            extra_images.append(crop.numpy())
-            extra_labels.append([0]*(num_classes-1) + [1])
+            for _ in range(crops_per_image):
+                crop = tf.image.random_crop(img, size=crop_shape)
+                extra_images.append(crop.numpy())
+                extra_labels.append([0]*(num_classes-1) + [1])
+        except Exception as e:
+            print(f"Error on image {filename}: {e}")
 
     return np.array(extra_images), np.array(extra_labels)
 
@@ -39,18 +43,22 @@ best_val_accuracy = 0.0
 best_epoch = 0
 
 # Manually handle training and validation
-for epoch in range(50):  # Assuming 50 epochs
+for epoch in range(500):
     print(f"Epoch {epoch+1}/{50}")
     
     # Load and process extra images
-    extra_images, extra_labels = load_and_process_images(directory='../../imagenet',
+    extra_images_all, extra_labels_all = load_and_process_images(directory='../../imagenet',
                                                          crop_shape=(32, 32, 3),
                                                          num_images=2048,
                                                          crops_per_image=16)
+    extra_val_images, extra_val_labels = extra_images_all[:256], extra_labels_all[:256]
+    extra_train_images, extra_train_labels = extra_images_all[256:], extra_labels_all[256:]
 
     # Append extra images and labels to your training data
-    X_train_augmented = np.concatenate((X_train, extra_images), axis=0)
-    y_train_augmented = np.concatenate((y_train, extra_labels), axis=0)
+    X_train_augmented = np.concatenate((X_train, extra_train_images), axis=0)
+    y_train_augmented = np.concatenate((y_train, extra_train_labels), axis=0)
+    X_val_augmented = np.concatenate((X_val, extra_val_images), axis=0)
+    y_val_augmented = np.concatenate((y_val, extra_val_labels), axis=0)
     
     # Optionally shuffle the augmented dataset
     indices = np.arange(X_train_augmented.shape[0])
@@ -61,7 +69,7 @@ for epoch in range(50):  # Assuming 50 epochs
     # Train on the augmented dataset for this epoch
     history = model.fit(X_train_augmented, y_train_augmented,
                         batch_size=32,
-                        validation_data=(X_val, y_val),
+                        validation_data=(X_val_augmented, y_val_augmented),
                         verbose=1)
     
     # Check if the validation accuracy of this epoch is the best so far
@@ -71,6 +79,9 @@ for epoch in range(50):  # Assuming 50 epochs
         model.save('models/best_model_so_far.h5')
         best_val_accuracy = val_accuracy
         best_epoch = epoch
+
+    if epoch % 10 == 0:
+        model.save(f'models/epoch_{epoch}.h5')
 
     # You can also implement early stopping manually by checking if the current epoch - best_epoch exceeds your patience
 
