@@ -61,9 +61,10 @@ model = load_model('src/models/best_model_so_far.h5')
 window_size = 32
 stride = 16
 
-for img_path in Path("test_images").iterdir():
+for img_idx, img_path in enumerate(sorted(Path("test_images").iterdir())):
     # Put the color axis last for the stride process
-    full_img = cv2.imread(str(img_path)) / 255.0
+    original_img = cv2.imread(str(img_path))
+    full_img = original_img / 255.0
 
     detections = []
 
@@ -113,8 +114,7 @@ for img_path in Path("test_images").iterdir():
         half_width = 36
         if confidence > 0.8:
             print("Found", class_names[obj_class], "at", x, y, "with confidence", confidence)
-            cv2.rectangle(full_img, (y - half_width, x - half_width), (y + half_width, x + half_width), (0, 0, 255), thickness=5)
-            cv2.putText(full_img, class_names[obj_class], (y + half_width, x + half_width), cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, (0, 0, 255), 2, 2)
+            cv2.rectangle(original_img, (y - half_width, x - half_width), (y + half_width, x + half_width), (0, 0, 255), thickness=5)
+            cv2.putText(original_img, class_names[obj_class], (y + half_width, x + half_width), cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, (0, 0, 255), 2, 2)
 
-    plt.imshow(np.flip(full_img, axis=2))
-    plt.show()
+    cv2.imwrite(f"{img_idx}.png", original_img)
